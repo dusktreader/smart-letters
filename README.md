@@ -1,7 +1,5 @@
 [![Build Status](https://github.com/dusktreader/smart-letters/actions/workflows/push.yaml/badge.svg)](https://github.com/dusktreader/smart-letters/actions/workflows/push.yaml)
-![Python Versions](https://img.shields.io/pypi/pyversions/smart-letters?label=python-versions&logo=python&style=plastic)
-![PyPI Versions](https://img.shields.io/pypi/v/smart-letters?label=pypi-version&logo=python&style=plastic)
-![License](https://img.shields.io/pypi/l/smart-letters?style=plastic)
+[![PyPI Versions](https://img.shields.io/pypi/v/smart-letters?style=plastic&label=pypi-version)](https://img.shields.io/pypi/v/smart-letters?style=plastic&label=pypi-version)
 
 > [!IMPORTANT]
 > I'm looking for a job right now! If you know of any openings that match my skill-set,

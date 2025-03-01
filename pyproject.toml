@@ -1,6 +1,6 @@
 [project]
 name = "smart-letters"
-version = "0.1.1"
+version = "0.1.2"
 description = "Generate cover letters for specific job postings using OpenAI."
 authors = [
     {name = "Tucker Beck", email ="tucker.beck@gmail.com"},

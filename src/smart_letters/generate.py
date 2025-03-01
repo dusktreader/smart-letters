@@ -251,26 +251,20 @@ def generate(
     example_text: str | None = None
     if example_letter:
         logger.debug(f"Loading example text from {example_letter}")
-        heading_text = example_letter.read_text()
+        example_text = example_letter.read_text()
 
     logger.debug(f"Pulling posting from {posting_url}")
     response = httpx.get(posting_url)
     response.raise_for_status()
     posting_text = response.text
 
-    kwargs: dict[str, Any] = dict()
-    if example_letter:
-        logger.debug(f"Loading example letter from {example_letter}")
-        kwargs["example_text"] = example_letter.read_text()
-
     logger.debug("Generating letter")
 
     api_key = ctx.obj.settings.openai_api_key
 
-    generate_args: list[Any] = [api_key, candidate_name, posting_text, resume_text]
+    generate_args: list[Any] = [api_key, posting_text, resume_text]
     generate_kwargs: dict[str, Any] = dict(
         example_text=example_text,
-        sig_path=sig_path,
     )
 
     assemble_args = [
@@ -305,7 +299,7 @@ def generate(
             generate_kwargs["reprompts"] = reprompts
 
             logger.debug("Regenerating letter based on feedback")
-            text = generate_letter(*generate_args, **kwargs)
+            text = generate_letter(*generate_args, **generate_kwargs)
             full_text = assemble_letter(text, *assemble_args)
 
     edit = typer.confirm("Would you like to edit the letter?", default=False)

@@ -1,0 +1,61 @@
+@font-face {
+  font-family: 'FiraSans';
+  src: url("FiraSans-Regular.ttf") format('truetype');
+}
+
+@font-face {
+  font-family: 'FiraSansBold';
+  font-weight: 900;
+  src: url("FiraSans-Bold.ttf") format('truetype');
+}
+
+@font-face {
+  font-family: 'NotoEmoji';
+  font-style: normal;
+  src: url("NotoEmoji-Regular.ttf") format('truetype');
+}
+
+a:link {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+strong {
+  font-family: FiraSansBold;
+}
+
+h1 {
+  font-family: FiraSansBold;
+  margin-bottom: 0.1em;
+  font-size: 2em;
+}
+
+h1 + p {
+  margin-top: 0.0em;
+  margin-bottom: 0.0em;
+}
+
+p + hr {
+  margin-top: 0.1em;
+}
+
+hr {
+  border-top: 1px solid;
+  margin-top: 0.0em;
+  margin-bottom: 1em;
+}
+
+p {
+  font-family: FiraSans, sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size:  1em;
+}
+
+
+.emoji {
+  font-family: NotoEmoji;
+}

@@ -41,8 +41,9 @@ def pull_resume(letter_config: LetterConfig) -> str:
 
 def pull_example(letter_config: LetterConfig) -> str | None:
     if letter_config.example_path:
-        logger.debug(f"Loading example text from {letter_config.example_path}")
-        return letter_config.example_path.read_text()
+        letter_path = letter_config.example_path.expanduser()
+        logger.debug(f"Loading example text from {letter_path}")
+        return letter_path.read_text()
     return None
 
 

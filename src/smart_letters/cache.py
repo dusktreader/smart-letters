@@ -5,6 +5,7 @@ from smart_letters.exceptions import Abort
 
 
 CACHE_DIR: Path = Path.home() / ".local/share/smart-letters"
+BACKUP_DIR: Path = CACHE_DIR / "backup"
 
 
 def init_cache(func):
@@ -12,9 +13,15 @@ def init_cache(func):
     def wrapper(*args, **kwargs):
         try:
             CACHE_DIR.mkdir(exist_ok=True, parents=True)
+            BACKUP_DIR.mkdir(exist_ok=True)
             info_file = CACHE_DIR / "info.txt"
             info_file.write_text(
-                "This directory is used by Smart Letters for its cache."
+                """
+                This directory is used by Smart Letters for its cache.
+
+                The sub-directory, backup, is used for storing intermediate letters.
+                Files are named by timestamp in this folder.
+                """
             )
         except Exception:
             raise Abort(

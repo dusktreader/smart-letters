@@ -194,6 +194,7 @@ example heading:
 ---
 ```
 
+
 #### --sig-path
 
 I also like to include a signature image in my generated cover letter. If you include
@@ -207,6 +208,39 @@ Best regards,
 
 Wile E. Coyote
 ```
+
+
+#### --output-directory
+
+This option lets you set a target directory where letters will be saved when they are generated.
+If you don't supply it, the default will be the current directory where you call the `smart-letters`
+app.
+
+
+#### --dev-prompt-path
+
+By default, `smart-letters` uses a built-in developer prompt when it's generating letters. If you
+want to have more control of the prompt that is used, you can supply a path to your own prompt
+file.
+
+
+#### --user-prompt-template-path
+
+By default, `smart-letters` uses a built-in user prompt that is a mako template. The template has
+the following values rendered into it at generation time:
+
+* resume_text: The raw text of your resume
+* posting_text: The raw text of the job posting
+* example_text: An optional example letter to use as reference
+
+You can supply a path to your own template if you want to have more control of the user prompt.
+
+
+#### --editor-command
+
+This option allows you to tell `smart-letters` which app to use to edit the generated letters
+before they are finalized. If you don't supply it, `smart-letters` will attempt to use the
+default editor configured for your system.
 
 
 ## Generation
@@ -239,17 +273,17 @@ This option is only used for inclusion in the filename. It's useful to be able t
 distinguish between many letters that you've generated over time.
 
 
-### --dump-html
+### --example-letter
 
-This is only really meant to be used for debugging. The `smart-letters` program
-renders the letters in this order:
+This option can be used to give the `generate` command an example (text) letter to
+use for a reference when it's generating your cover letter.
 
-```
-Generated Markdown -> HTML --> PDF
-```
 
-Sometimes its useful to see what was produced in the intermediary HTML. Use this option
-to take a peek.
+### --render
+
+By default `smart-letters` will ask you if you want to render the final letter to PDF
+when it's done building it. With this option, you can control the answer to this
+question ahead of time.
 
 
 ### --fake
@@ -262,3 +296,21 @@ option, and it will use a pre-baked letter body instead of calling out to OpenAI
 The `smart-letters` program stores its configuration in a file so that it can use
 the same settings for many runs without having a super-cluttered command line. You can
 check out the location where the config file is saved in the `config.py` module.
+
+
+## Rendering
+
+If you already have a Markdown letter that you would like to render to PDF, you can
+use the `render` command. It will produce the letter by converting the Markdown to
+HTML, styling it with CSS, and then rendering the result to a PDF.
+
+There is options available on the `render` sub-command:
+
+
+### --file-stem
+
+By default, `render` will use the same file stem as the provided Markdown file. However,
+if you want to change the stem, you can use this option.
+
+For example, if the provided markdown file is named `my-letter.md`, the rendered PDF will
+be named `my-letter.pdf`.

@@ -8,7 +8,7 @@ test:
 	uv run pytest
 
 .PHONY: mypy
-mypy:
+types:
 	uv run mypy ${PACKAGE_TARGET} --pretty
 
 .PHONY: lint
@@ -16,7 +16,7 @@ lint:
 	uv run ruff check ${PACKAGE_TARGET} tests
 
 .PHONY: qa
-qa: test lint mypy
+qa: test lint types
 	echo "All quality checks pass!"
 
 .PHONY: format

@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Annotated
 
 import httpx
+import openai
+import textwrap
 import typer
 import pyperclip
 from inflection import parameterize
@@ -54,6 +56,15 @@ def pull_heading(letter_config: LetterConfig) -> str | None:
     return None
 
 
+def wrap_letter(letter_text: str, letter_config: LetterConfig) -> str:
+    if letter_config.markdown_textwrap:
+        logger.debug(f"Wrapping letter to {letter_config.markdown_textwrap} characters")
+        long_paragraphs = letter_text.split("\n\n")
+        short_paragraphs = [textwrap.fill(p, width=letter_config.markdown_textwrap) for p in long_paragraphs]
+        letter_text = "\n\n".join(short_paragraphs)
+    return letter_text
+
+
 def generate_letter(
     prompt_config: PromptConfig,
     letter_config: LetterConfig,
@@ -77,11 +88,11 @@ def generate_letter(
         messages.append(dict(role="assistant", content=reprompt.old_letter))
         messages.append(dict(role="user", content=reprompt.user_feedback))
 
-    kwargs = dict(model="gpt-4o", n=1)
-    logger.debug(f"Using params for OpenAI: \n{json.dumps(kwargs, indent=2)}")
-    cmp = client.chat.completions.create(messages=messages, **kwargs)  # type: ignore
+    logger.debug(f"Using params for OpenAI: \n{json.dumps(letter_config.openai_params, indent=2)}")
+    cmp = client.chat.completions.create(messages=messages, n=1, **letter_config.openai_params)  # type: ignore
     text = cmp.choices[0].message.content
     assert text is not None
+    text = wrap_letter(text, letter_config)
     return text
 
 
@@ -242,12 +253,14 @@ def generate(
         candidate_name=ctx.obj.settings.candidate_name,
         filename_prefix=ctx.obj.settings.filename_prefix,
         openai_api_key=ctx.obj.settings.openai_api_key,
+        openai_params=ctx.obj.settings.openai_params.model_dump(),
         cache_path=BACKUP_DIR.joinpath(f".{ctx.obj.timestamp}.md"),
         editor_command=ctx.obj.settings.editor_command,
         sig_path=ctx.obj.settings.sig_path,
         heading_path=ctx.obj.settings.heading_path,
         example_path=example_letter,
         output_directory=ctx.obj.settings.output_directory,
+        markdown_textwrap=ctx.obj.settings.markdown_textwrap,
         company=company,
         position=position,
         posting_url=posting_url,

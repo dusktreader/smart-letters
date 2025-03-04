@@ -29,6 +29,7 @@ class LetterConfig:
     candidate_name: str
     filename_prefix: str
     openai_api_key: str
+    openai_params: dict
     posting_url: str
     fake: bool
     cache_path: Path
@@ -37,6 +38,7 @@ class LetterConfig:
     heading_path: Path | None = None
     example_path: Path | None = None
     output_directory: Path | None = None
+    markdown_textwrap: int | None = None
     company: str | None = None
     position: str | None = None
 

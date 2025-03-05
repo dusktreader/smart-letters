@@ -30,7 +30,7 @@ class LetterConfig:
     filename_prefix: str
     openai_api_key: str
     openai_params: dict
-    posting_url: str
+    posting_loc: str
     fake: bool
     cache_path: Path
     editor_command: str

@@ -3,9 +3,9 @@ import json
 import subprocess
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlparse
 
 import httpx
-import openai
 import textwrap
 import typer
 import pyperclip
@@ -18,7 +18,7 @@ from smart_letters.config import attach_settings
 from smart_letters.exceptions import handle_abort
 from smart_letters.format import terminal_message, simple_message
 from smart_letters.prompt import get_prompts, build_prompts
-from smart_letters.utilities import asset_path
+from smart_letters.utilities import asset_path, spinner
 from smart_letters.render import render_letter
 from smart_letters.schemas import LetterConfig, PromptConfig, RenderConfig
 
@@ -30,10 +30,22 @@ class Reprompt:
 
 
 def pull_posting(letter_config: LetterConfig) -> str:
-    logger.debug(f"Pulling posting from {letter_config.posting_url}")
-    response = httpx.get(letter_config.posting_url)
-    response.raise_for_status()
-    return response.text
+    logger.debug(f"Pulling posting from {letter_config.posting_loc}")
+
+    logger.debug("Detecting if posting location is a URL")
+    url_parts = urlparse(letter_config.posting_loc)
+    if all([url_parts.scheme, url_parts.netloc]):
+        logger.debug("Location is a URL. Scraping posting")
+        with spinner(f"Scraping posting from {letter_config.posting_loc}"):
+            response = httpx.get(letter_config.posting_loc)
+        response.raise_for_status()
+        posting_text = response.text
+    else:
+        logger.debug("Location is a local file. Reading posting")
+        posting_path = Path(letter_config.posting_loc).expanduser()
+        posting_text = posting_path.read_text()
+
+    return posting_text
 
 
 def pull_resume(letter_config: LetterConfig) -> str:
@@ -89,7 +101,8 @@ def generate_letter(
         messages.append(dict(role="user", content=reprompt.user_feedback))
 
     logger.debug(f"Using params for OpenAI: \n{json.dumps(letter_config.openai_params, indent=2)}")
-    cmp = client.chat.completions.create(messages=messages, n=1, **letter_config.openai_params)  # type: ignore
+    with spinner("Generating letter with OpenAI"):
+        cmp = client.chat.completions.create(messages=messages, n=1, **letter_config.openai_params)  # type: ignore
     text = cmp.choices[0].message.content
     assert text is not None
     text = wrap_letter(text, letter_config)
@@ -219,7 +232,7 @@ cli = typer.Typer()
 @attach_settings
 def generate(
     ctx: typer.Context,
-    posting_url: Annotated[str, typer.Argument(help="The URL of the job posting.")],
+    posting_loc: Annotated[str, typer.Argument(help="The URL or local path of the job posting.")],
     company: Annotated[str | None, typer.Option(help="The name of the company.")] = None,
     position: Annotated[str | None, typer.Option(help="The title for the job.")] = None,
     example_letter: Annotated[Path | None, typer.Option(help="An example letter to use as a reference.")] = None,
@@ -263,7 +276,7 @@ def generate(
         markdown_textwrap=ctx.obj.settings.markdown_textwrap,
         company=company,
         position=position,
-        posting_url=posting_url,
+        posting_loc=posting_loc,
         fake=fake,
     )
 

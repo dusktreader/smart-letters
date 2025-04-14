@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+
+## v0.3.0 - 2025-04-14
+* Slightly enhanced AI prompt
+* Added configurable OpenAI parameters
+* Added command to show settings
+* Added auto-wrapping for markdown
+* Added support for pulling posting from file
+* Added spinners to show progress on steps
+
+
 ## v0.2.0 - 2025-03-03
 * Large refactor with lots of features added:
 ** Added `render` command to allow renders of prepared markdown letters

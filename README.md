@@ -11,7 +11,7 @@
 [//]: # (Add an asciicast)
 
 `smart-letters` is a CLI application designed to help you write cover letters rapidly
-for specifc job postings. By harnessing the power of OpenAI and Python, we can generate
+for specific job postings. By harnessing the power of OpenAI and Python, we can generate
 a styled cover letter in PDF format in seconds. The slowest part is waiting for the
 request from OpenAI to return!
 
@@ -48,7 +48,7 @@ smart-letters generate --help
 
 An example run command would look like this:
 
-```
+```bash
 smart-letters generate --company=ACME --position="Senior Engineering Lead" https://github.com/dusktreader/smart-letters/blob/main/etc/fake-listing.md
 ```
 
@@ -187,7 +187,7 @@ example heading:
 ```markdown
 # Wile E. Coyote
 
-📍 [Tuscon, AZ](https://maps.app.goo.gl/5siCgp4pUymGPU499) /
+📍 [Tucson, AZ](https://maps.app.goo.gl/5siCgp4pUymGPU499) /
 📧 [wile.e.coyote@gmail.com](wile.e.coyote@gmail.com) /
 🛠 [wile.e.coyote@github](https://github.com/wile.e.coyote)
 

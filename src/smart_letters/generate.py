@@ -3,8 +3,10 @@ import json
 import subprocess
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlparse
 
 import httpx
+import textwrap
 import typer
 import pyperclip
 from inflection import parameterize
@@ -16,7 +18,7 @@ from smart_letters.config import attach_settings
 from smart_letters.exceptions import handle_abort
 from smart_letters.format import terminal_message, simple_message
 from smart_letters.prompt import get_prompts, build_prompts
-from smart_letters.utilities import asset_path
+from smart_letters.utilities import asset_path, spinner
 from smart_letters.render import render_letter
 from smart_letters.schemas import LetterConfig, PromptConfig, RenderConfig
 
@@ -28,10 +30,22 @@ class Reprompt:
 
 
 def pull_posting(letter_config: LetterConfig) -> str:
-    logger.debug(f"Pulling posting from {letter_config.posting_url}")
-    response = httpx.get(letter_config.posting_url)
-    response.raise_for_status()
-    return response.text
+    logger.debug(f"Pulling posting from {letter_config.posting_loc}")
+
+    logger.debug("Detecting if posting location is a URL")
+    url_parts = urlparse(letter_config.posting_loc)
+    if all([url_parts.scheme, url_parts.netloc]):
+        logger.debug("Location is a URL. Scraping posting")
+        with spinner(f"Scraping posting from {letter_config.posting_loc}"):
+            response = httpx.get(letter_config.posting_loc)
+        response.raise_for_status()
+        posting_text = response.text
+    else:
+        logger.debug("Location is a local file. Reading posting")
+        posting_path = Path(letter_config.posting_loc).expanduser()
+        posting_text = posting_path.read_text()
+
+    return posting_text
 
 
 def pull_resume(letter_config: LetterConfig) -> str:
@@ -41,8 +55,9 @@ def pull_resume(letter_config: LetterConfig) -> str:
 
 def pull_example(letter_config: LetterConfig) -> str | None:
     if letter_config.example_path:
-        logger.debug(f"Loading example text from {letter_config.example_path}")
-        return letter_config.example_path.read_text()
+        letter_path = letter_config.example_path.expanduser()
+        logger.debug(f"Loading example text from {letter_path}")
+        return letter_path.read_text()
     return None
 
 
@@ -51,6 +66,15 @@ def pull_heading(letter_config: LetterConfig) -> str | None:
         logger.debug(f"Loading heading text from {letter_config.heading_path}")
         return letter_config.heading_path.read_text()
     return None
+
+
+def wrap_letter(letter_text: str, letter_config: LetterConfig) -> str:
+    if letter_config.markdown_textwrap:
+        logger.debug(f"Wrapping letter to {letter_config.markdown_textwrap} characters")
+        long_paragraphs = letter_text.split("\n\n")
+        short_paragraphs = [textwrap.fill(p, width=letter_config.markdown_textwrap) for p in long_paragraphs]
+        letter_text = "\n\n".join(short_paragraphs)
+    return letter_text
 
 
 def generate_letter(
@@ -76,11 +100,12 @@ def generate_letter(
         messages.append(dict(role="assistant", content=reprompt.old_letter))
         messages.append(dict(role="user", content=reprompt.user_feedback))
 
-    kwargs = dict(model="gpt-4o", n=1)
-    logger.debug(f"Using params for OpenAI: \n{json.dumps(kwargs, indent=2)}")
-    cmp = client.chat.completions.create(messages=messages, **kwargs)  # type: ignore
+    logger.debug(f"Using params for OpenAI: \n{json.dumps(letter_config.openai_params, indent=2)}")
+    with spinner("Generating letter with OpenAI"):
+        cmp = client.chat.completions.create(messages=messages, n=1, **letter_config.openai_params)  # type: ignore
     text = cmp.choices[0].message.content
     assert text is not None
+    text = wrap_letter(text, letter_config)
     return text
 
 
@@ -207,7 +232,7 @@ cli = typer.Typer()
 @attach_settings
 def generate(
     ctx: typer.Context,
-    posting_url: Annotated[str, typer.Argument(help="The URL of the job posting.")],
+    posting_loc: Annotated[str, typer.Argument(help="The URL or local path of the job posting.")],
     company: Annotated[str | None, typer.Option(help="The name of the company.")] = None,
     position: Annotated[str | None, typer.Option(help="The title for the job.")] = None,
     example_letter: Annotated[Path | None, typer.Option(help="An example letter to use as a reference.")] = None,
@@ -241,15 +266,17 @@ def generate(
         candidate_name=ctx.obj.settings.candidate_name,
         filename_prefix=ctx.obj.settings.filename_prefix,
         openai_api_key=ctx.obj.settings.openai_api_key,
+        openai_params=ctx.obj.settings.openai_params.model_dump(),
         cache_path=BACKUP_DIR.joinpath(f".{ctx.obj.timestamp}.md"),
         editor_command=ctx.obj.settings.editor_command,
         sig_path=ctx.obj.settings.sig_path,
         heading_path=ctx.obj.settings.heading_path,
         example_path=example_letter,
         output_directory=ctx.obj.settings.output_directory,
+        markdown_textwrap=ctx.obj.settings.markdown_textwrap,
         company=company,
         position=position,
-        posting_url=posting_url,
+        posting_loc=posting_loc,
         fake=fake,
     )
 

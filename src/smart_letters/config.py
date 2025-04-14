@@ -9,7 +9,7 @@ import snick
 import typer
 from inflection import dasherize
 from loguru import logger
-from pydantic import AfterValidator, BaseModel, ValidationError, Field
+from pydantic import AfterValidator, BaseModel, PositiveInt, ValidationError, Field
 
 from smart_letters.exceptions import Abort, handle_abort
 from smart_letters.cache import CACHE_DIR, init_cache
@@ -39,6 +39,19 @@ def has_editor(value: str | None) -> str:
         raise ValueError("Couldn't load editor from environment. Please set it explicitly")
 
 
+class OpenAIParams(BaseModel):
+    model: str = "gpt-4o"
+    temperature: Annotated[float, Field(ge=0.0, le=2.0)] = 1.0
+    top_p: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
+    frequency_penalty: Annotated[float, Field(ge=-2.0, le=2.0)] = 0.0
+    presence_penalty: Annotated[float, Field(ge=-2.0, le=2.0)] = 0.0
+
+
+def parse_openai_params(value: str) -> OpenAIParams:
+    value_dict = json.loads(value)
+    return OpenAIParams(**value_dict)
+
+
 class Settings(BaseModel):
     openai_api_key: str
     resume_path: Annotated[Path, AfterValidator(file_exists)]
@@ -47,9 +60,11 @@ class Settings(BaseModel):
     heading_path: Annotated[Path | None, AfterValidator(file_exists)] = None
     sig_path: Annotated[Path | None, AfterValidator(file_exists)] = None
     output_directory: Annotated[Path | None, AfterValidator(file_exists)] = None
+    markdown_textwrap: PositiveInt | None = None
     dev_prompt_path: Annotated[Path | None, AfterValidator(file_exists)] = None
     user_prompt_template_path: Annotated[Path | None, AfterValidator(file_exists)] = None
     editor_command: Annotated[str | None, AfterValidator(has_editor)] = None
+    openai_params: OpenAIParams = OpenAIParams()
 
     invalid_warning: Annotated[
         str | None,
@@ -99,7 +114,13 @@ def update_settings(settings: Settings, **settings_values) -> Settings:
     with handle_config_error():
         logger.debug("Validating settings")
         settings_dict = settings.model_dump(exclude_unset=True)
-        settings_dict.update(**settings_values)
+
+        openai_params = settings_dict.pop("openai_params", {})
+        new_openai_params = settings_values.pop("openai_params", None)
+        if new_openai_params is not None:
+            openai_params.update(**new_openai_params.model_dump(exclude_unset=True))
+
+        settings_dict.update(openai_params=openai_params, **settings_values)
         return Settings(**settings_dict)
 
 
@@ -160,6 +181,19 @@ def clear_settings():
     settings_path.unlink(missing_ok=True)
 
 
+def show_settings(settings: Settings):
+    parts = []
+    for field_name, field_value in settings:
+        if field_name == "invalid_warning":
+            continue
+        parts.append((dasherize(field_name), field_value))
+    max_field_len = max(len(field_name) for field_name, _ in parts)
+    message = "\n".join(f"[bold]{k:<{max_field_len}}[/bold] -> {v}" for k, v in parts)
+    if settings.invalid_warning:
+        message += f"\n\n[red]Configuration is invalid: {settings.invalid_warning}[/red]"
+    terminal_message(message, subject="Current Configuration")
+
+
 cli = typer.Typer(help="Configure the app, change settings, or view how it's currently configured")
 
 
@@ -194,6 +228,14 @@ def bind(
             """
         ),
     ] = None,
+    markdown_textwrap: Annotated[
+        int | None,
+        typer.Option(
+            help="""
+                If set, wrap the markdown text to the given number of characters.
+            """,
+        ),
+    ] = None,
     dev_prompt_path: Annotated[
         Path | None,
         typer.Option(help="An optional path to the developer prompt for letter generation"),
@@ -211,6 +253,16 @@ def bind(
             """
         ),
     ] = None,
+    openai_params: Annotated[
+        OpenAIParams,
+        typer.Option(
+            parser=parse_openai_params,
+            help="""
+            Provide the OpenAI parameters as a JSON string.
+            If not provided, will use the default parameters.
+            """
+        ),
+    ] = OpenAIParams(),
 ):
     """
     Bind the configuration to the app.
@@ -224,11 +276,14 @@ def bind(
         sig_path=sig_path,
         heading_path=heading_path,
         output_directory=output_directory,
+        markdown_textwrap=markdown_textwrap,
         dev_prompt_path=dev_prompt_path,
         user_prompt_path=user_prompt_template_path,
         editor_command=editor_command,
+        openai_params=openai_params,
     )
     dump_settings(settings)
+    show_settings(settings)
 
 
 @cli.command()
@@ -255,6 +310,14 @@ def update(
             """
         ),
     ] = None,
+    markdown_textwrap: Annotated[
+        int | None,
+        typer.Option(
+            help="""
+                If set, wrap the markdown text to the given number of characters.
+            """,
+        ),
+    ] = None,
     dev_prompt_path: Annotated[
         Path | None,
         typer.Option(help="An optional path to the developer prompt for letter generation"),
@@ -272,6 +335,16 @@ def update(
             """
         ),
     ] = None,
+    openai_params: Annotated[
+        OpenAIParams | None,
+        typer.Option(
+            parser=parse_openai_params,
+            help="""
+            Provide the OpenAI parameters as a JSON string.
+            If not provided, will use the default parameters.
+            """
+        ),
+    ] = None,
 ):
     """
     Update one or more configuration settings that are bound to the app.
@@ -280,6 +353,7 @@ def update(
     kwargs: dict[str, Any] = {k: v for (k, v) in locals().items() if v is not None}
     settings = update_settings(ctx.obj.settings, **kwargs)
     dump_settings(settings)
+    show_settings(settings)
 
 
 @cli.command()
@@ -303,6 +377,14 @@ def unset(
             """
         ),
     ] = False,
+    markdown_textwrap: Annotated[
+        bool,
+        typer.Option(
+            help="""
+                If set, wrap the markdown text to the given number of characters.
+            """,
+        ),
+    ] = False,
     dev_prompt_path: Annotated[
         bool,
         typer.Option(help="An optional path to the developer prompt for letter generation"),
@@ -320,6 +402,16 @@ def unset(
             """
         ),
     ] = False,
+    openai_params: Annotated[
+        bool,
+        typer.Option(
+            parser=parse_openai_params,
+            help="""
+            Provide the OpenAI parameters as a JSON string.
+            If not provided, will use the default parameters.
+            """
+        ),
+    ] = False,
 ):
     """
     Remove a configuration setting that was previously bound to the app.
@@ -328,6 +420,7 @@ def unset(
     keys = [k for k in locals() if locals()[k]]
     settings = unset_settings(ctx.obj.settings, *keys)
     dump_settings(settings)
+    show_settings(settings)
 
 
 @cli.command()
@@ -338,16 +431,7 @@ def show(ctx: typer.Context):
     """
     Show the config that is currently bound to the app.
     """
-    parts = []
-    for field_name, field_value in ctx.obj.settings:
-        if field_name == "invalid_warning":
-            continue
-        parts.append((dasherize(field_name), field_value))
-    max_field_len = max(len(field_name) for field_name, _ in parts)
-    message = "\n".join(f"[bold]{k:<{max_field_len}}[/bold] -> {v}" for k, v in parts)
-    if ctx.obj.settings.invalid_warning:
-        message += f"\n\n[red]Configuration is invalid: {ctx.obj.settings.invalid_warning}[/red]"
-    terminal_message(message, subject="Current Configuration")
+    show_settings(ctx.obj.settings)
 
 
 @cli.command()

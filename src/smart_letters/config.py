@@ -40,7 +40,7 @@ def has_editor(value: str | None) -> str:
 
 
 class OpenAIParams(BaseModel):
-    model: str = "gpt-4o"
+    model: str = "gpt-4.1"
     temperature: Annotated[float, Field(ge=0.0, le=2.0)] = 1.0
     top_p: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
     frequency_penalty: Annotated[float, Field(ge=-2.0, le=2.0)] = 0.0

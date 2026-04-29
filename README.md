@@ -2,9 +2,8 @@
 [![PyPI Versions](https://img.shields.io/pypi/v/smart-letters?style=plastic&label=pypi-version)](https://img.shields.io/pypi/v/smart-letters?style=plastic&label=pypi-version)
 
 > [!IMPORTANT]
-> I'm looking for a job right now! If you know of any openings that match my skill-set,
-> please let me know! You can read my resume over at my
-> [cv](https://github.com/dusktreader/cv) project. Thanks!!
+> This app helped me find a job! If you would like to chat about my approach and how you can use smart-letters to land
+> your next gig, please reach out!
 
 # Smart Letters
 
